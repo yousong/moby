@@ -15,7 +15,7 @@ import (
 
 /*
 Ali logging driver usage
-	docker run -d --name logger2 \
+	docker run -d --name test-logger \
  		--log-driver alilogs \
 		--log-opt alilogs-endpoint=cn-hangzhou.log.aliyuncs.com \
 		--log-opt alilogs-project=test_project \
@@ -23,9 +23,9 @@ Ali logging driver usage
 
 		// You can add these extra attributes to log message
 		--log-opt labels=attr1,attr2,attr3 \
-		--label attr1=attr1 \
-		--label attr2=attr2 \
-		--label attr3=attr3 \
+		--label attr1=attr1Value \
+		--label attr2=attr2Value \
+		--label attr3=attr3Value \
 
 		// You assign these environment variables for alilogs logging driver to work
 		// "securityToken" and "topic" are optinal
