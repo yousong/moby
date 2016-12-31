@@ -13,33 +13,51 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
+/*
+Ali logging driver usage
+	docker run -d --name logger2 \
+ 		--log-driver alilogs \
+		--log-opt alilogs-endpoint=cn-hangzhou.log.aliyuncs.com \
+		--log-opt alilogs-project=test_project \
+		--log-opt alilogs-logstore=test-logstore \
+
+		// You can add these extra attributes to log message
+		--log-opt labels=attr1,attr2,attr3 \
+		--label attr1=attr1 \
+		--label attr2=attr2 \
+		--label attr3=attr3 \
+
+		// You assign these environment variables for alilogs logging driver to work
+		// "securityToken" and "topic" are optinal
+	    --log-opt env=accessKeyID,accessKeySecret,securityToken,topic \
+		--env "accessKeyID=xxx" \
+		--env "accessKeySecret=xxx" \
+		--env "securityToken=xxx" \
+		--env "topic=demo_topic" \
+		log-producer
+*/
+
 const (
 	name        = "alilogs"
 	endpointKey = "alilogs-endpoint"
 	projectKey  = "alilogs-project"
 	logstoreKey = "alilogs-logstore"
-
-	topicEnvKey     = "topic"
-	serviceEnvKey   = "serviceName"
-	functionEnvKey  = "functionName"
-	requestIDEnvKey = "requestID"
+	envKey      = "env"
+	labelsKey   = "labels"
 
 	accessKeyIDEnvKey     = "accessKeyID"
 	accessKeySecretEnvKey = "accessKeySecret"
-	sessionTokenEnvKey    = "sessionToken"
+	securityTokenEnvKey   = "securityToken"
+	topicEnvKey           = "topic"
 
+	// PutLogs limit in Loghub, 3MB or 4096 records per put
 	batchPublishFrequency = 5 * time.Second
-
-	//PutLogs接口每次可以写入的日志数据量上限为3MB或者4096条
-	maximumBytesPerPut = 3145728
-	maximumLogsPerPut  = 4096
+	maximumBytesPerPut    = 3145728
+	maximumLogsPerPut     = 4096
 )
 
 type logStream struct {
 	topic            string
-	serviceName      string
-	functionName     string
-	requestID        string
 	extraLogContents []*sls.LogContent
 	client           AliLogAPI
 	messages         chan *logger.Message
@@ -65,69 +83,51 @@ func New(ctx logger.Context) (logger.Logger, error) {
 	extraContents := []*sls.LogContent{}
 	accessKeyID := ""
 	accessKeySecret := ""
-	sessionToken := ""
+	securityToken := ""
 	topicName := ""
-	serviceName := ""
-	functionName := ""
-	requestID := ""
 
 	extra := ctx.ExtraAttributes(nil)
 	value, ok := extra[accessKeyIDEnvKey]
 	if ok {
 		accessKeyID = value
+		delete(extra, accessKeyIDEnvKey)
 	} else {
 		return nil, fmt.Errorf("must specify a value for env '%s'", accessKeyIDEnvKey)
 	}
+
 	value, ok = extra[accessKeySecretEnvKey]
 	if ok {
 		accessKeySecret = value
+		delete(extra, accessKeySecretEnvKey)
 	} else {
 		return nil, fmt.Errorf("must specify a value for env '%s'", accessKeySecretEnvKey)
 	}
 
-	if value, ok = extra[sessionTokenEnvKey]; ok {
-		sessionToken = value
+	if value, ok = extra[securityTokenEnvKey]; ok {
+		securityToken = value
+		delete(extra, securityTokenEnvKey)
 	}
 
 	if value, ok = extra[topicEnvKey]; ok {
 		topicName = value
+		delete(extra, topicEnvKey)
 	}
 
-	// extra attributes in log record
-	if value, ok = extra[serviceEnvKey]; ok {
-		serviceName = value
-		serviceNameContent := &sls.LogContent{
-			Key:   proto.String(serviceEnvKey),
-			Value: proto.String(serviceName),
+	// add extra contents to log record
+	for key, value := range extra {
+		logContent := &sls.LogContent{
+			Key:   proto.String(key),
+			Value: proto.String(value),
 		}
-		extraContents = append(extraContents, serviceNameContent)
-	}
-	if value, ok = extra[functionEnvKey]; ok {
-		functionName = value
-		functionNameContent := &sls.LogContent{
-			Key:   proto.String(functionEnvKey),
-			Value: proto.String(functionName),
-		}
-		extraContents = append(extraContents, functionNameContent)
-	}
-	if value, ok = extra[requestIDEnvKey]; ok {
-		requestID = value
-		requestIDContent := &sls.LogContent{
-			Key:   proto.String(requestIDEnvKey),
-			Value: proto.String(requestID),
-		}
-		extraContents = append(extraContents, requestIDContent)
+		extraContents = append(extraContents, logContent)
 	}
 
-	aliLogClient, err := NewAliLogClient(endpoint, projectName, logstoreName, accessKeyID, accessKeySecret, sessionToken)
+	aliLogClient, err := NewAliLogClient(endpoint, projectName, logstoreName, accessKeyID, accessKeySecret, securityToken)
 	if err != nil {
 		return nil, err
 	}
 	containerStream := &logStream{
 		topic:            topicName,
-		serviceName:      serviceName,
-		functionName:     functionName,
-		requestID:        requestID,
 		extraLogContents: extraContents,
 		client:           aliLogClient,
 		messages:         make(chan *logger.Message, maximumLogsPerPut),
@@ -192,9 +192,6 @@ func (ls *logStream) collectLogs() {
 				"endpoint":             aliLogClient.Endpoint,
 				"project":              aliLogClient.ProjectName,
 				"logstore":             aliLogClient.LogstoreName,
-				"serviceName":          ls.serviceName,
-				"functionName":         ls.functionName,
-				"requestID":            ls.requestID,
 				"published log number": len(logGroup.Logs),
 				"published log size":   logGroup.Size(),
 			}).Debug("publish log when timer timeout")
@@ -207,9 +204,6 @@ func (ls *logStream) collectLogs() {
 					"endpoint":             aliLogClient.Endpoint,
 					"project":              aliLogClient.ProjectName,
 					"logstore":             aliLogClient.LogstoreName,
-					"serviceName":          ls.serviceName,
-					"functionName":         ls.functionName,
-					"reuestID":             ls.requestID,
 					"published log number": len(logGroup.Logs),
 					"published log size":   logGroup.Size(),
 				}).Debug("publish log when no more logs")
@@ -235,9 +229,6 @@ func (ls *logStream) collectLogs() {
 						"endpoint":             aliLogClient.Endpoint,
 						"project":              aliLogClient.ProjectName,
 						"logstore":             aliLogClient.LogstoreName,
-						"serviceName":          ls.serviceName,
-						"functionName":         ls.functionName,
-						"requestID":            ls.requestID,
 						"published log number": len(logGroup.Logs),
 						"published log size":   logGroup.Size(),
 					}).Debug("publish logs when touch the limit")
@@ -262,9 +253,6 @@ func (ls *logStream) publishLogs(lg *sls.LogGroup) {
 				"endpoint":     aliLogClient.Endpoint,
 				"project":      aliLogClient.ProjectName,
 				"logstore":     aliLogClient.LogstoreName,
-				"serviceName":  ls.serviceName,
-				"functionName": ls.functionName,
-				"requestId":    ls.requestID,
 			}).Error("PutLogs occurs sls error")
 		} else {
 			logrus.Error(err)
@@ -276,8 +264,7 @@ func (ls *logStream) publishLogs(lg *sls.LogGroup) {
 func ValidateLogOpt(cfg map[string]string) error {
 	for key := range cfg {
 		switch key {
-		case "env":
-		case endpointKey, projectKey, logstoreKey:
+		case endpointKey, projectKey, logstoreKey, labelsKey, envKey:
 		default:
 			return fmt.Errorf("unknown log opt '%s' for %s log driver", key, name)
 		}

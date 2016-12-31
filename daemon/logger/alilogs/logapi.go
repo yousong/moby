@@ -16,57 +16,48 @@ type AliLogAPI interface {
 
 // AliLogClient implements AliLogAPI interface
 type AliLogClient struct {
-	Endpoint        string
-	ProjectName     string
-	LogstoreName    string
-	accessKeyID     string
-	accessKeySecret string
-	sessionToken    string
-	project         *sls.LogProject
-	logstore        *sls.LogStore
+	Endpoint     string
+	ProjectName  string
+	LogstoreName string
+	logStore     *sls.LogStore
 }
 
 // PutLogs implements ali PutLogs method
 func (client *AliLogClient) PutLogs(logGroup *sls.LogGroup) error {
-	return client.logstore.PutLogs(logGroup)
+	return client.logStore.PutLogs(logGroup)
 }
 
 // NewAliLogClient ...
-func NewAliLogClient(serviceEndpoint, projectName, logstoreName, accessID, accessSecret, token string) (AliLogAPI, error) {
+func NewAliLogClient(endpoint, projectName, logstoreName, accessKeyID, accessKeySecret, securityToken string) (AliLogAPI, error) {
 	client := AliLogClient{}
-	client.Endpoint = serviceEndpoint
+	client.Endpoint = endpoint
 	client.ProjectName = projectName
 	client.LogstoreName = logstoreName
-	client.accessKeyID = accessID
-	client.accessKeySecret = accessSecret
-	client.sessionToken = token
 
-	logrus.WithFields(logrus.Fields{
-		"endpoint":     serviceEndpoint,
-		"projectName":  projectName,
-		"logstoreName": logstoreName,
-	}).Info("Created alilogs client")
-
-	logProject, err := sls.NewLogProject(projectName, serviceEndpoint, accessID, accessSecret)
+	logProject, err := sls.NewLogProject(projectName, endpoint, accessKeyID, accessKeySecret)
 	if err != nil {
 		logrus.WithFields(logrus.Fields{
 			"error": err,
 		}).Error("Could not get ali log project")
 		return nil, errors.New("Could not get ali log project")
 	}
-	if client.sessionToken != "" {
-		logProject.WithToken(client.sessionToken)
+	if securityToken != "" {
+		logProject.WithToken(securityToken)
 	}
-	client.project = logProject
 
-	logStore, err := client.project.GetLogStore(logstoreName)
+	client.logStore, err = logProject.GetLogStore(logstoreName)
 	if err != nil {
 		logrus.WithFields(logrus.Fields{
 			"error": err,
 		}).Error("Could not get ali logstore")
 		return nil, errors.New("Could not get ali logstore")
 	}
-	client.logstore = logStore
+
+	logrus.WithFields(logrus.Fields{
+		"endpoint":     endpoint,
+		"projectName":  projectName,
+		"logstoreName": logstoreName,
+	}).Info("Created alilogs client")
 
 	return &client, nil
 }
