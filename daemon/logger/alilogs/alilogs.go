@@ -160,32 +160,32 @@ var newTicker = func(freq time.Duration) *time.Ticker {
 // the maximum number of total bytes in a batch (defined in
 // maximumBytesPerPut).
 func (ls *logStream) collectLogs() {
+	le := logrus.WithFields(logrus.Fields{
+		"endpoint": ls.endpoint,
+		"project":  ls.projectName,
+		"logstore": ls.logstoreName,
+	})
+
 	timer := newTicker(batchPublishFrequency)
 	for {
 		select {
 		case <-timer.C:
 			ls.publishLogs()
-			logrus.WithFields(logrus.Fields{
-				"time trigger":         "send data",
-				"endpoint":             ls.endpoint,
-				"project":              ls.projectName,
-				"logstore":             ls.logstoreName,
-				"published log number": len(ls.logGroup.Logs),
-				"published log size":   ls.logGroup.Size(),
-			}).Debug("publish log when timer timeout")
+			le.WithFields(logrus.Fields{
+				"trigger": "time",
+				"count":   len(ls.logGroup.Logs),
+				"size":    ls.logGroup.Size(),
+			}).Debug("")
 			ls.logGroup.Reset()
 			ls.logGroup.Topic = proto.String(ls.topic)
 		case msg, more := <-ls.messages:
 			if !more {
 				ls.publishLogs()
 				logrus.WithFields(logrus.Fields{
-					"no more log":          "send data",
-					"endpoint":             ls.endpoint,
-					"project":              ls.projectName,
-					"logstore":             ls.logstoreName,
-					"published log number": len(ls.logGroup.Logs),
-					"published log size":   ls.logGroup.Size(),
-				}).Debug("publish log when no more logs")
+					"trigger": "EOF",
+					"count":   len(ls.logGroup.Logs),
+					"size":    ls.logGroup.Size(),
+				}).Debug("")
 				return
 			}
 			unprocessedLine := msg.Line
@@ -205,13 +205,10 @@ func (ls *logStream) collectLogs() {
 					// line would push it over the maximum number of total bytes.
 					ls.publishLogs()
 					logrus.WithFields(logrus.Fields{
-						"get limit":            "send data",
-						"endpoint":             ls.endpoint,
-						"project":              ls.projectName,
-						"logstore":             ls.logstoreName,
-						"published log number": len(ls.logGroup.Logs),
-						"published log size":   ls.logGroup.Size(),
-					}).Debug("publish logs when touch the limit")
+						"trigger": "size",
+						"count":   len(ls.logGroup.Logs),
+						"size":    ls.logGroup.Size(),
+					}).Debug("")
 					ls.logGroup.Reset()
 					ls.logGroup.Topic = proto.String(ls.topic)
 				}
@@ -225,16 +222,18 @@ func (ls *logStream) collectLogs() {
 func (ls *logStream) publishLogs() {
 	err := ls.client.PutLogs(ls.logGroup)
 	if err != nil {
+		le := logrus.WithFields(logrus.Fields{
+			"endpoint": ls.endpoint,
+			"project":  ls.projectName,
+			"logstore": ls.logstoreName,
+		})
 		if serviceErr, ok := err.(sls.Error); ok {
-			logrus.WithFields(logrus.Fields{
+			le.WithFields(logrus.Fields{
 				"errorCode":    serviceErr.Code,
 				"errorMessage": serviceErr.Message,
-				"endpoint":     ls.endpoint,
-				"project":      ls.projectName,
-				"logstore":     ls.logstoreName,
 			}).Error("PutLogs occurs sls error")
 		} else {
-			logrus.Error(err)
+			le.Error("PutLogs occurs err:", err)
 		}
 	}
 }
