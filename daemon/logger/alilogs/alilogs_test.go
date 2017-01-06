@@ -1,10 +1,9 @@
 package alilogs
 
 import (
+	"sync"
 	"testing"
 	"time"
-
-	"sync"
 
 	"github.com/docker/docker/daemon/logger"
 	sls "github.com/galaxydi/go-loghub"
@@ -14,7 +13,7 @@ import (
 func TestCollectLogsNumberLimit(t *testing.T) {
 	extraContents := []*sls.LogContent{}
 	mockClient := NewMockClient()
-	mockClient.ErrType = 0
+	mockClient.ErrType = NoError
 
 	stream := &logStream{
 		endpoint:         "test-endpoint",
@@ -107,7 +106,6 @@ func TestCollectLogsSimple(t *testing.T) {
 	}
 	extraContents := []*sls.LogContent{ec1, ec2}
 	mockClient := NewMockClient()
-	mockClient.ErrType = 0
 	stream := &logStream{
 		endpoint:         "test-endpoint",
 		projectName:      "test-project",
@@ -122,7 +120,15 @@ func TestCollectLogsSimple(t *testing.T) {
 		messages: make(chan *logger.Message, maximumLogsPerPut),
 	}
 
+	ticks := make(chan time.Time)
+	newTicker = func(_ time.Duration) *time.Ticker {
+		return &time.Ticker{
+			C: ticks,
+		}
+	}
+
 	go stream.collectLogs()
+
 	stream.Log(&logger.Message{
 		Line:      []byte("this is test log 1"),
 		Timestamp: time.Time{},
@@ -135,8 +141,13 @@ func TestCollectLogsSimple(t *testing.T) {
 		Line:      []byte("this is test log 3"),
 		Timestamp: time.Time{},
 	})
-	time.Sleep(batchPublishFrequency)
+
+	ticks <- time.Time{}
 	stream.Close()
+
+	// Wait a moment for the logs were writted into mockClient
+	time.Sleep(1 * time.Second)
+
 	if len(mockClient.Logs) != 3 {
 		t.Errorf("should be 3 number logs, actual log numbers: %v", len(mockClient.Logs))
 	}
@@ -178,13 +189,13 @@ func TestPublishLogs(t *testing.T) {
 		Contents: contents,
 	}
 	stream.logGroup.Logs = append(stream.logGroup.Logs, &logRecord)
-	mockClient.ErrType = 0
+	mockClient.ErrType = NoError
 	stream.publishLogs()
 
-	mockClient.ErrType = 1
+	mockClient.ErrType = InternalServerError
 	stream.publishLogs()
 
-	mockClient.ErrType = 2
+	mockClient.ErrType = UnknownError
 	stream.publishLogs()
 }
 
