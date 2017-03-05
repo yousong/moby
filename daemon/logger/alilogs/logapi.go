@@ -4,6 +4,7 @@ package alilogs
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/galaxydi/go-loghub"
@@ -49,10 +50,11 @@ func (client *AliLogClient) getLogStore(endpoint, projectName, logstoreName, acc
 	}
 	logStore, err := logProject.GetLogStore(logstoreName)
 	if err != nil {
+		errorMsg := fmt.Sprintf("get logstore fail due to '%s'", err.Error())
 		logrus.WithFields(logrus.Fields{
 			"error": err,
-		}).Error("Could not get ali logstore")
-		return nil, errors.New("Could not get ali logstore")
+		}).Error(errorMsg)
+		return nil, errors.New(errorMsg)
 	}
 	return logStore, nil
 }
@@ -60,10 +62,11 @@ func (client *AliLogClient) getLogStore(endpoint, projectName, logstoreName, acc
 func (client *AliLogClient) getLogProject(projectName, endpoint, accessKeyID, accessKeySecret, securityToken string) (*sls.LogProject, error) {
 	logProject, err := sls.NewLogProject(projectName, endpoint, accessKeyID, accessKeySecret)
 	if err != nil {
+		errorMsg := fmt.Sprintf("get project fail due to '%s'", err.Error())
 		logrus.WithFields(logrus.Fields{
 			"error": err,
-		}).Error("Could not get ali log project")
-		return nil, errors.New("Could not get ali log project")
+		}).Error(errorMsg)
+		return nil, errors.New(errorMsg)
 	}
 	if securityToken != "" {
 		logProject.WithToken(securityToken)
