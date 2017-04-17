@@ -50,7 +50,8 @@ func (client *AliLogClient) getLogStore(endpoint, projectName, logstoreName, acc
 	}
 	logStore, err := logProject.GetLogStore(logstoreName)
 	if err != nil {
-		errorMsg := fmt.Sprintf("get logstore fail due to '%s'", err.Error())
+		// return loghub error message directly
+		errorMsg := fmt.Sprintf("Could not get ali logstore %s from project %s due to '%v'", logstoreName, projectName, err)
 		logrus.WithFields(logrus.Fields{
 			"error": err,
 		}).Error(errorMsg)
