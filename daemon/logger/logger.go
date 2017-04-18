@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/galaxydi/docker/pkg/jsonlog"
+	"github.com/docker/docker/pkg/jsonlog"
 )
 
 // ErrReadLogsNotSupported is returned when the logger does not support reading logs.
