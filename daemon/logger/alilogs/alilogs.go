@@ -27,7 +27,7 @@ Ali logging driver usage
 		--label attr3=attr3Value \
 
 		// You assign these environment variables for alilogs logging driver to work
-		// "securityToken" and "topic" are optinal
+		// "securityToken" and "topic" are optional
 	    --log-opt env=accessKeyID,accessKeySecret,securityToken,topic \
 		--env "accessKeyID=xxx" \
 		--env "accessKeySecret=xxx" \
