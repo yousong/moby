@@ -122,6 +122,11 @@ clone git github.com/tinylib/msgp 75ee40d2601edf122ef667e2a07d600d4c44490c
 # fsnotify
 clone git gopkg.in/fsnotify.v1 v1.2.11
 
+# alilogs deps
+clone git github.com/galaxydi/go-loghub 228ca31911b37dd900a5ab9a3fbdc66c2d88ab16
+clone git github.com/cloudflare/golz4 ef862a3cdc58a6f1fee4e3af3d44fbe279194cde
+clone git github.com/golang/glog 23def4e6c14b4da8ac2ed8007337bc5eb5007998
+
 # awslogs deps
 clone git github.com/aws/aws-sdk-go v1.1.30
 clone git github.com/go-ini/ini 060d7da055ba6ec5ea7a31f116332fe5efa04ce0

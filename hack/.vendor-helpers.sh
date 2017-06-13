@@ -134,6 +134,9 @@ clean() {
 	# The docker proxy command is built from libnetwork
 	findArgs+=( -or -path vendor/src/github.com/docker/libnetwork/cmd/proxy )
 
+    # lz4 uses cgo and has .c and .h files
+    findArgs+=( -or -path vendor/src/github.com/cloudflare/golz4/src )
+
 	local IFS=$'\n'
 	local prune=( $($find vendor -depth -type d -not '(' "${findArgs[@]}" ')') )
 	unset IFS
