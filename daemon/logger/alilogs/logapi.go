@@ -3,11 +3,8 @@
 package alilogs
 
 import (
-	"errors"
-	"fmt"
-
 	"github.com/Sirupsen/logrus"
-	"github.com/galaxydi/go-loghub"
+	"github.com/aliyun-fc/go-loghub"
 )
 
 // AliLogAPI define log api interface
@@ -48,27 +45,14 @@ func (client *AliLogClient) getLogStore(endpoint, projectName, logstoreName, acc
 	if err != nil {
 		return nil, err
 	}
-	logStore, err := logProject.GetLogStore(logstoreName)
-	if err != nil {
-		// return loghub error message directly
-		errorMsg := fmt.Sprintf("Could not get ali logstore %s from project %s due to '%v'", logstoreName, projectName, err)
-		logrus.WithFields(logrus.Fields{
-			"error": err,
-		}).Error(errorMsg)
-		return nil, errors.New(errorMsg)
-	}
+	// sls.NewLogStore returns no error
+	logStore, _ := sls.NewLogStore(logstoreName, logProject)
 	return logStore, nil
 }
 
 func (client *AliLogClient) getLogProject(projectName, endpoint, accessKeyID, accessKeySecret, securityToken string) (*sls.LogProject, error) {
-	logProject, err := sls.NewLogProject(projectName, endpoint, accessKeyID, accessKeySecret)
-	if err != nil {
-		errorMsg := fmt.Sprintf("get project fail due to '%s'", err.Error())
-		logrus.WithFields(logrus.Fields{
-			"error": err,
-		}).Error(errorMsg)
-		return nil, errors.New(errorMsg)
-	}
+	// sls.NewLogProject returns no error
+	logProject, _ := sls.NewLogProject(projectName, endpoint, accessKeyID, accessKeySecret)
 	if securityToken != "" {
 		logProject.WithToken(securityToken)
 	}

@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
+	sls "github.com/aliyun-fc/go-loghub"
 	"github.com/docker/docker/daemon/logger"
-	sls "github.com/galaxydi/go-loghub"
 	"github.com/gogo/protobuf/proto"
 )
 
