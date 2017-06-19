@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/aliyun-fc/go-loghub"
 	"github.com/docker/docker/daemon/logger"
-	"github.com/galaxydi/go-loghub"
 	"github.com/golang/protobuf/proto"
 )
 

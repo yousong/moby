@@ -3,7 +3,7 @@ package alilogs
 import (
 	"fmt"
 
-	sls "github.com/galaxydi/go-loghub"
+	sls "github.com/aliyun-fc/go-loghub"
 )
 
 type errorType int

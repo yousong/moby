@@ -123,7 +123,7 @@ clone git github.com/tinylib/msgp 75ee40d2601edf122ef667e2a07d600d4c44490c
 clone git gopkg.in/fsnotify.v1 v1.2.11
 
 # alilogs deps
-clone git github.com/galaxydi/go-loghub 228ca31911b37dd900a5ab9a3fbdc66c2d88ab16
+clone git github.com/aliyun-fc/go-loghub 5c958ab5f7b2cd8f9e965fc0724fa3d51941d636
 clone git github.com/cloudflare/golz4 ef862a3cdc58a6f1fee4e3af3d44fbe279194cde
 clone git github.com/golang/glog 23def4e6c14b4da8ac2ed8007337bc5eb5007998
 
