@@ -5,6 +5,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/docker/container"
@@ -13,6 +14,52 @@ import (
 	volumestore "github.com/docker/docker/volume/store"
 	"github.com/docker/engine-api/types"
 )
+
+var cgroupFilePaths = map[string]string{"cpu,cpuacct":"/sys/fs/cgroup/cpu,cpuacct/docker/%s",
+	"net_cls,net_prio":"/sys/fs/cgroup/net_cls,net_prio/docker/%s",
+	"cpuset":"/sys/fs/cgroup/cpuset/docker/%s",
+	"freezer":"/sys/fs/cgroup/freezer/docker/%s",
+	"memory":"/sys/fs/cgroup/memory/docker/%s",
+	"systemd":"/sys/fs/cgroup/systemd/docker/%s",
+	"net_cls":"/sys/fs/cgroup/net_cls/docker/%s",
+	"blkio":"/sys/fs/cgroup/blkio/docker/%s",
+	"cpu":"/sys/fs/cgroup/cpu/docker/%s",
+	"cpuacct":"/sys/fs/cgroup/cpuacct/docker/%s",
+	"devices":"/sys/fs/cgroup/devices/docker/%s",
+	"hugetlb":"/sys/fs/cgroup/hugetlb/docker/%s",
+	"net_prio":"/sys/fs/cgroup/net_prio/docker/%s",
+	"perf_event":"/sys/fs/cgroup/perf_event/docker/%s",
+	"pids":"/sys/fs/cgroup/pids/docker/%s"}
+
+// removePaths iterates over the provided paths removing them.
+// We trying to remove all paths five times with increasing delay between tries.
+// If after all there are not removed cgroups - appropriate error will be
+// returned.
+func removePaths(paths map[string]string) (err error) {
+	delay := 10 * time.Millisecond
+	for i := 0; i < 5; i++ {
+		if i != 0 {
+			time.Sleep(delay)
+			delay *= 2
+		}
+		for s, p := range paths {
+			os.RemoveAll(p)
+			//os.RemoveAll(p)
+			// TODO: here probably should be logging
+			_, err := os.Stat(p)
+			// We need this strange way of checking cgroups existence because
+			// RemoveAll almost always returns error, even on already removed
+			// cgroups
+			if os.IsNotExist(err) {
+				delete(paths, s)
+			}
+		}
+		if len(paths) == 0 {
+			return nil
+		}
+	}
+	return fmt.Errorf("Failed to remove paths: %v", paths)
+}
 
 // ContainerRm removes the container id from the filesystem. An error
 // is returned if the container is not found, or if the remove
@@ -131,6 +178,17 @@ func (daemon *Daemon) cleanupContainer(container *container.Container, forceRemo
 		if err != nil && err != layer.ErrMountDoesNotExist {
 			return fmt.Errorf("Driver %s failed to remove root filesystem %s: %s", daemon.GraphDriverName(), container.ID, err)
 		}
+	}
+
+	// destroy cgroup files
+	cgroupPaths := make(map[string]string)
+	for s, p := range cgroupFilePaths {
+		cgroupPaths[s] = fmt.Sprintf(p, container.ID)
+	}
+
+	err = removePaths(cgroupPaths)
+	if err != nil {
+		return fmt.Errorf("Fail to destroy cgroups of container %s, err %s", container.ID, err)
 	}
 
 	return nil
