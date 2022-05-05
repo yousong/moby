@@ -37,7 +37,7 @@ func (i *Idm) GetID() (uint64, error) {
 	if i.handle == nil {
 		return 0, fmt.Errorf("ID set is not initialized")
 	}
-	ordinal, err := i.handle.SetAny()
+	ordinal, err := i.handle.SetAny(false)
 	return i.start + ordinal, err
 }
 

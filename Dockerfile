@@ -26,7 +26,7 @@
 FROM debian:jessie
 
 # add zfs ppa
-RUN apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys E871F18B51E0147C77796AC81196BA81F6B0FC61 \
+RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys E871F18B51E0147C77796AC81196BA81F6B0FC61 \
 	|| apt-key adv --keyserver hkp://pgp.mit.edu:80 --recv-keys E871F18B51E0147C77796AC81196BA81F6B0FC61
 RUN echo deb http://ppa.launchpad.net/zfs-native/stable/ubuntu trusty main > /etc/apt/sources.list.d/zfs.list
 
@@ -77,7 +77,7 @@ RUN apt-get update && apt-get install -y \
 # Get lvm2 source for compiling statically
 ENV LVM2_VERSION 2.02.103
 RUN mkdir -p /usr/local/lvm2 \
-	&& curl -fsSL "https://mirrors.kernel.org/sourceware/lvm2/LVM2.${LVM2_VERSION}.tgz" \
+	&& curl -k -fsSL "https://mirrors.kernel.org/sourceware/lvm2/LVM2.${LVM2_VERSION}.tgz" \
 		| tar -xzC /usr/local/lvm2 --strip-components=1
 # see https://git.fedorahosted.org/cgit/lvm2.git/refs/tags for release tags
 
