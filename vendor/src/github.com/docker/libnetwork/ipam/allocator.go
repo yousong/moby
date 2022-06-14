@@ -528,7 +528,7 @@ func (a *Allocator) getAddress(nw *net.IPNet, bitmask *bitseq.Handle, prefAddres
 		return nil, ipamapi.ErrNoAvailableIPs
 	}
 	if ipr == nil && prefAddress == nil {
-		ordinal, err = bitmask.SetAny(false)
+		ordinal, err = bitmask.SetAny(true)
 	} else if prefAddress != nil {
 		hostPart, e := types.GetHostPartIP(prefAddress, base.Mask)
 		if e != nil {
@@ -537,7 +537,7 @@ func (a *Allocator) getAddress(nw *net.IPNet, bitmask *bitseq.Handle, prefAddres
 		ordinal = ipToUint64(types.GetMinimalIP(hostPart))
 		err = bitmask.Set(ordinal)
 	} else {
-		ordinal, err = bitmask.SetAnyInRange(ipr.Start, ipr.End, false)
+		ordinal, err = bitmask.SetAnyInRange(ipr.Start, ipr.End, true)
 	}
 
 	switch err {
